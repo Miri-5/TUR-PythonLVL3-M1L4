@@ -103,6 +103,45 @@ class Wizard(Pokemon):
         self.hp += heal_amount
         return f"Sihirbaz Pokémon kendini iyileştirdi! +{heal_amount} sağlık. Yeni sağlık: {self.hp}"
 
+from datetime import datetime, timedelta
+
+class Pokemon:
+    def __init__(self, name: str, hp: int = 100):
+        self.name = name
+        self.hp = hp
+        # Son beslenme zamanını sakla (çok eski bir tarih: ilk çağrıda beslemeye izin verir)
+        self.last_feed_time: datetime = datetime.min
+
+    async def feed(self, feed_interval: int = 20, hp_increase: int = 10) -> str:
+        """
+        feed_interval: saniye cinsinden bekleme süresi
+        hp_increase: izinli olduğunda eklenecek HP miktarı
+        """
+        now = datetime.now()
+        delta = timedelta(seconds=feed_interval)
+
+        if (now - self.last_feed_time) >= delta:
+            self.hp += hp_increase
+            self.last_feed_time = now
+            return f"Pokémon’un sağlığı geri yüklendi. Mevcut HP: {self.hp}"
+        else:
+            next_time = self.last_feed_time + delta
+            return (
+                "Pokémonunuzu şu zamanda besleyebilirsiniz: "
+                f"{next_time:%Y-%m-%d %H:%M:%S}"
+            )
+
+class Wizard(Pokemon):
+    async def feed(self, feed_interval: int = 20, hp_increase: int = 10) -> str:
+        # Sihirbazlar normalden daha fazla iyileştirir: +%50
+        boosted = int(hp_increase * 1.5)
+        return await super().feed(feed_interval=feed_interval, hp_increase=boosted)
+
+class Fighter(Pokemon):
+    async def feed(self, feed_interval: int = 20, hp_increase: int = 10) -> str:
+        # Dövüşçüler için besleme aralığı kısadır: yarısına düşür
+        shorter_interval = max(1, feed_interval // 2)
+        return await super().feed(feed_interval=shorter_interval, hp_increase=hp_increase)
 
 if __name__ == '__main__':
     import asyncio
@@ -111,4 +150,5 @@ if __name__ == '__main__':
 
     print(asyncio.run(wizard.info()))
     print(asyncio.run(fighter.info()))
+
     print(asyncio.run(fighter.attack(wizard)))
